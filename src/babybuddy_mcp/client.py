@@ -31,12 +31,19 @@ async def api_list(
     path: str,
     params: dict[str, object] | None = None,
 ) -> list[dict[str, object]]:
-    """GET a list endpoint, following DRF pagination until all results are collected."""
+    """GET a list endpoint, optionally following DRF pagination.
+    
+    Only follows pagination if no explicit limit is provided in params.
+    This prevents infinite loops when the API ignores the limit parameter.
+    """
     client = get_client()
     all_results: list[dict[str, object]] = []
     url = f"/api/{path}/"
     query = dict(params or {})
-    query.setdefault("limit", settings.default_page_size)
+    
+    # Check if user explicitly provided a limit
+    has_limit = "limit" in query
+    limit_value = query.get("limit", 50)
 
     while url:
         response = await client.get(url, params=query)
@@ -44,6 +51,11 @@ async def api_list(
         data = response.json()
         results = data.get("results", [])
         all_results.extend(results)
+        
+        # Stop if user provided a limit - they asked for specific number of results
+        if has_limit:
+            break
+            
         # After the first request params are encoded in the next URL
         query = {}
         url = data.get("next") or ""
