@@ -1,0 +1,91 @@
+from typing import Annotated
+
+from fastmcp import FastMCP
+
+from ..client import QueryParams, api_delete, api_list, api_patch, api_post
+
+mcp = FastMCP("sleep")
+
+
+@mcp.tool
+async def list_sleep(
+    child_id: Annotated[int | None, "Filter by child ID. Use list_children to get IDs."] = None,
+    start_min: Annotated[str | None, "Earliest start time, ISO 8601"] = None,
+    start_max: Annotated[str | None, "Latest start time, ISO 8601"] = None,
+    end_min: Annotated[str | None, "Earliest end time, ISO 8601"] = None,
+    end_max: Annotated[str | None, "Latest end time, ISO 8601"] = None,
+    limit: Annotated[int, "Maximum number of records to return"] = 50,
+) -> list[dict[str, object]]:
+    """List sleep records with optional filters."""
+    params: QueryParams = {"limit": limit}
+    if child_id is not None:
+        params["child"] = child_id
+    if start_min is not None:
+        params["start_min"] = start_min
+    if start_max is not None:
+        params["start_max"] = start_max
+    if end_min is not None:
+        params["end_min"] = end_min
+    if end_max is not None:
+        params["end_max"] = end_max
+    return await api_list("sleep", params)
+
+
+@mcp.tool
+async def create_sleep(
+    child_id: Annotated[int, "ID of the child. Use list_children to get IDs."],
+    start: Annotated[str, "Start time in ISO 8601 format (e.g. 2024-01-15T21:00:00)"],
+    end: Annotated[str, "End time in ISO 8601 format"],
+    nap: Annotated[
+        bool | None,
+        "True if this was a nap, False if night sleep, None to let babybuddy auto-determine",
+    ] = None,
+    notes: Annotated[str | None, "Optional notes"] = None,
+    timer_id: Annotated[
+        int | None,
+        "Use a running timer instead of explicit start/end times. Use list_timers to find active timers.",
+    ] = None,
+) -> dict[str, object]:
+    """Record a sleep session."""
+    data: dict[str, object] = {
+        "child": child_id,
+        "start": start,
+        "end": end,
+    }
+    if nap is not None:
+        data["nap"] = nap
+    if notes is not None:
+        data["notes"] = notes
+    if timer_id is not None:
+        data["timer"] = timer_id
+    return await api_post("sleep", data)
+
+
+@mcp.tool
+async def update_sleep(
+    sleep_id: Annotated[int, "ID of the sleep record to update"],
+    start: Annotated[str | None, "New start time in ISO 8601 format"] = None,
+    end: Annotated[str | None, "New end time in ISO 8601 format"] = None,
+    nap: Annotated[bool | None, "True if nap, False if night sleep"] = None,
+    notes: Annotated[str | None, "New notes"] = None,
+) -> dict[str, object]:
+    """Update an existing sleep record. Only provided fields are changed."""
+    data: dict[str, object] = {}
+    if start is not None:
+        data["start"] = start
+    if end is not None:
+        data["end"] = end
+    if nap is not None:
+        data["nap"] = nap
+    if notes is not None:
+        data["notes"] = notes
+    return await api_patch("sleep", sleep_id, data)
+
+
+@mcp.tool
+async def delete_sleep(
+    sleep_id: Annotated[int, "ID of the sleep record to permanently delete"],
+) -> str:
+    """Delete a sleep record. This action is permanent."""
+    await api_delete("sleep", sleep_id)
+    return f"Sleep record {sleep_id} deleted successfully."

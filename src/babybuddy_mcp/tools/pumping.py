@@ -1,0 +1,88 @@
+from typing import Annotated
+
+from fastmcp import FastMCP
+
+from ..client import QueryParams, api_delete, api_list, api_patch, api_post
+
+mcp = FastMCP("pumping")
+
+
+@mcp.tool
+async def list_pumping(
+    child_id: Annotated[int | None, "Filter by child ID. Use list_children to get IDs."] = None,
+    start_min: Annotated[str | None, "Earliest start time, ISO 8601"] = None,
+    start_max: Annotated[str | None, "Latest start time, ISO 8601"] = None,
+    end_min: Annotated[str | None, "Earliest end time, ISO 8601"] = None,
+    end_max: Annotated[str | None, "Latest end time, ISO 8601"] = None,
+    limit: Annotated[int, "Maximum number of records to return"] = 50,
+) -> list[dict[str, object]]:
+    """List pumping session records with optional filters."""
+    params: QueryParams = {"limit": limit}
+    if child_id is not None:
+        params["child"] = child_id
+    if start_min is not None:
+        params["start_min"] = start_min
+    if start_max is not None:
+        params["start_max"] = start_max
+    if end_min is not None:
+        params["end_min"] = end_min
+    if end_max is not None:
+        params["end_max"] = end_max
+    return await api_list("pumping", params)
+
+
+@mcp.tool
+async def create_pumping(
+    child_id: Annotated[int, "ID of the child. Use list_children to get IDs."],
+    start: Annotated[str, "Start time in ISO 8601 format (e.g. 2024-01-15T08:00:00)"],
+    end: Annotated[str, "End time in ISO 8601 format"],
+    amount: Annotated[float | None, "Amount pumped (units depend on babybuddy settings)"] = None,
+    notes: Annotated[str | None, "Optional notes"] = None,
+    timer_id: Annotated[
+        int | None,
+        "Use a running timer instead of explicit start/end times. Use list_timers to find active timers.",
+    ] = None,
+) -> dict[str, object]:
+    """Record a pumping session."""
+    data: dict[str, object] = {
+        "child": child_id,
+        "start": start,
+        "end": end,
+    }
+    if amount is not None:
+        data["amount"] = amount
+    if notes is not None:
+        data["notes"] = notes
+    if timer_id is not None:
+        data["timer"] = timer_id
+    return await api_post("pumping", data)
+
+
+@mcp.tool
+async def update_pumping(
+    pumping_id: Annotated[int, "ID of the pumping record to update"],
+    start: Annotated[str | None, "New start time in ISO 8601 format"] = None,
+    end: Annotated[str | None, "New end time in ISO 8601 format"] = None,
+    amount: Annotated[float | None, "New amount"] = None,
+    notes: Annotated[str | None, "New notes"] = None,
+) -> dict[str, object]:
+    """Update an existing pumping record. Only provided fields are changed."""
+    data: dict[str, object] = {}
+    if start is not None:
+        data["start"] = start
+    if end is not None:
+        data["end"] = end
+    if amount is not None:
+        data["amount"] = amount
+    if notes is not None:
+        data["notes"] = notes
+    return await api_patch("pumping", pumping_id, data)
+
+
+@mcp.tool
+async def delete_pumping(
+    pumping_id: Annotated[int, "ID of the pumping record to permanently delete"],
+) -> str:
+    """Delete a pumping record. This action is permanent."""
+    await api_delete("pumping", pumping_id)
+    return f"Pumping record {pumping_id} deleted successfully."

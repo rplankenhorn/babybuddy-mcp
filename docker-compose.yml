@@ -1,0 +1,8 @@
+services:
+  babybuddy-mcp:
+    build: .
+    container_name: babybuddy-mcp
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"

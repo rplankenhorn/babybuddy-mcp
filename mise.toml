@@ -1,0 +1,22 @@
+[tools]
+python = "3.13"
+
+[tasks.install]
+run = "uv sync --dev"
+description = "Install all dependencies"
+
+[tasks.test]
+run = "uv run pytest"
+description = "Run tests"
+
+[tasks.lint]
+run = "uv run ruff check src/ tests/"
+description = "Lint source code"
+
+[tasks.format]
+run = "uv run ruff format src/ tests/"
+description = "Format source code"
+
+[tasks.typecheck]
+run = "uv run mypy src/"
+description = "Type check source code"
